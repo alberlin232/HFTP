@@ -1,0 +1,3 @@
+/Users/aberlin/science/HFTP/build/CMakeFiles/server.dir
+/Users/aberlin/science/HFTP/build/CMakeFiles/edit_cache.dir
+/Users/aberlin/science/HFTP/build/CMakeFiles/rebuild_cache.dir
