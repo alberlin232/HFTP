@@ -9,25 +9,41 @@ struct Order {
     int quantity;
 };
 
+class OrderQueue {
+    std::queue<Order> queue;
+    int orders;
+public:
+    OrderQueue(): queue(), orders(0) {};
+    int getOrderNumber() { return orders;}
+    void push(Order order) {
+        queue.push(order);
+        orders += order.quantity;
+    }
+    void processOrder(Order *order) {
+        Order match =  queue.front();
+        int used = std::min(match.quantity, order->quantity);
+        match.quantity -= used;
+        order->quantity -= used;
+        orders -= used;
+        if (match.quantity <= 0) {
+            queue.pop();
+        }
+    }
+};
 
 class Book {
-    std::map<int, std::queue<Order> > bid;
-    std::map<int, std::queue<Order> > ask;
+    std::map<int, OrderQueue> bid;
+    std::map<int, OrderQueue> ask;
 public:
     Book(): bid(), ask() {};
 
     Order matchBid(Order order) {
         while (ask.contains(order.price) && order.quantity > 0) {
-            Order &match = ask[order.price].front();
-            int temp_quant = match.quantity;
-            match.quantity -= order.quantity;
-            order.quantity -= temp_quant;
-            if (match.quantity <= 0) {
-                ask[order.price].pop();
-                if (ask.size() <= 0) {
-                    ask.erase(order.price);
-                }
+            ask[order.price].processOrder(&order);
+            if (ask[order.price].getOrderNumber() <= 0) {
+                ask.erase(order.price);
             }
+            
         }
         return order;
     }
@@ -37,22 +53,16 @@ public:
             return;
         }
         if (!bid.contains(order.price)) {
-            bid[order.price] = std::queue<Order>();
+            bid[order.price] = OrderQueue();
         }
         bid[order.price].push(order);
     }
 
     Order matchAsk(Order order) {
         while (bid.contains(order.price) && order.quantity > 0) {
-            Order &match = bid[order.price].front();
-            int temp_quant = match.quantity;
-            match.quantity -= order.quantity;
-            order.quantity -= temp_quant;
-            if (match.quantity <= 0) {
-                bid[order.price].pop();
-                if (bid.size() <= 0) {
-                    bid.erase(order.price);
-                }
+            bid[order.price].processOrder(&order);
+            if (bid[order.price].getOrderNumber() <= 0) {
+                bid.erase(order.price);
             }
         }
         return order;
@@ -63,18 +73,8 @@ public:
             return;
         }
         if (!ask.contains(order.price)) {
-            ask[order.price] = std::queue<Order>();
+            ask[order.price] = OrderQueue();
         }
         ask[order.price].push(order);
-    }
-
-    void printAsk() {
-        for (const auto& [key, value] : ask) {
-            std::queue<Order> copy = value;
-            while (!copy.empty()) {
-                std::cout << copy.front().quantity << std::endl;
-                copy.pop();
-            }
-        }
     }
 };
