@@ -3,7 +3,7 @@
 #include "book.hpp"
 
 class Engine {
-    std::unordered_map<std::string, Book> stocks;
+    std::unordered_map<Ticker, Book> stocks;
 public:
     Engine(): stocks() {};
 
@@ -17,15 +17,16 @@ public:
         stocks.at(order.ticker).insertAsk(order);
     }
 
-    void printStock(std::string ticker) {
+    void printStock(Ticker ticker) {
         if (!stocks.contains(ticker)) {
             std::cout << "No Stock: " << ticker << std::endl;
+            return;
         }
-        std::vector<std::pair<double, std::pair<int, int>>> data = stocks.at(ticker).exportData();
+        std::vector<std::pair<Price, std::pair<Quantity, Quantity>>> data = stocks.at(ticker).exportData();
         std::cout << std::setw(10) << "Buy" << std::setw(15) << "Price" << std::setw(15) << "Sell" << std::endl;
         std::cout << std::string(40, '-') << std::endl; 
         for (const auto& entry : data) {
-            double price = entry.first;
+            Price price = entry.first;
             int buyQuantity = entry.second.first;
             int sellQuantity = entry.second.second;
 

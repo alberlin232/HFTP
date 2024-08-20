@@ -1,30 +1,25 @@
 #include <map>
 #include <unordered_map>
 #include <queue>
+#include "order.hpp"
 
-struct Order {
-    std::string ticker;
-    std::string id;
-    double price;
-    int quantity;
-};
 
 class OrderQueue {
     std::queue<Order> queue;
-    int orders;
+    Quantity quantity;
 public:
-    OrderQueue(): queue(), orders(0) {};
-    int getOrderNumber() { return orders;}
+    OrderQueue(): queue(), quantity(0) {};
+    Quantity getOrderNumber() { return quantity;}
     void push(Order order) {
         queue.push(order);
-        orders += order.quantity;
+        quantity += order.quantity;
     }
     void processOrder(Order *order) {
         Order match =  queue.front();
         int used = std::min(match.quantity, order->quantity);
         match.quantity -= used;
         order->quantity -= used;
-        orders -= used;
+        quantity -= used;
         if (match.quantity <= 0) {
             queue.pop();
         }
@@ -32,8 +27,8 @@ public:
 };
 
 class Book {
-    std::map<double, OrderQueue> bid;
-    std::map<double, OrderQueue> ask;
+    std::map<Price, OrderQueue> bid;
+    std::map<Price, OrderQueue> ask;
 public:
     Book(): bid(), ask() {};
 
@@ -75,8 +70,8 @@ public:
         ask[order.price].push(order);
     }
 
-    std::vector<std::pair<double, std::pair<int, int>>> exportData() {
-        std::vector<std::pair<double, std::pair<int, int>>> res;
+    std::vector<std::pair<Price, std::pair<Quantity, Quantity>>> exportData() {
+        std::vector<std::pair<Price, std::pair<Quantity, Quantity>>> res;
         for (auto it = ask.rbegin(); it != ask.rend(); it++) {
            res.push_back({it->first, {0, it->second.getOrderNumber()}}); 
         }
