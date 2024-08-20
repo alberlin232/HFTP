@@ -32,18 +32,16 @@ public:
 };
 
 class Book {
-    std::map<int, OrderQueue> bid;
-    std::map<int, OrderQueue> ask;
+    std::map<double, OrderQueue> bid;
+    std::map<double, OrderQueue> ask;
 public:
     Book(): bid(), ask() {};
 
     Order matchBid(Order order) {
-        while (ask.contains(order.price) && order.quantity > 0) {
-            ask[order.price].processOrder(&order);
-            if (ask[order.price].getOrderNumber() <= 0) {
-                ask.erase(order.price);
-            }
-            
+        for (auto it = ask.begin(); it != ask.end(); it++) {
+            if (it->first > order.price) break;
+            if (it->second.getOrderNumber() <= 0) continue;
+            it->second.processOrder(&order); 
         }
         return order;
     }
@@ -59,11 +57,10 @@ public:
     }
 
     Order matchAsk(Order order) {
-        while (bid.contains(order.price) && order.quantity > 0) {
-            bid[order.price].processOrder(&order);
-            if (bid[order.price].getOrderNumber() <= 0) {
-                bid.erase(order.price);
-            }
+        for (auto it = bid.rbegin(); it != bid.rend(); it++) {
+            if (it->first > order.price) break;
+            if (it->second.getOrderNumber() <= 0) continue;
+            it->second.processOrder(&order); 
         }
         return order;
     }
@@ -76,5 +73,16 @@ public:
             ask[order.price] = OrderQueue();
         }
         ask[order.price].push(order);
+    }
+
+    std::vector<std::pair<double, std::pair<int, int>>> exportData() {
+        std::vector<std::pair<double, std::pair<int, int>>> res;
+        for (auto it = ask.rbegin(); it != ask.rend(); it++) {
+           res.push_back({it->first, {0, it->second.getOrderNumber()}}); 
+        }
+        for (auto it = bid.begin(); it != bid.end(); it++) {
+            res.push_back({it->first, {it->second.getOrderNumber(), 0}});
+        } 
+        return res;
     }
 };
