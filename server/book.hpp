@@ -64,85 +64,109 @@ public:
 };
 
 class Book {
-    std::map<Price, OrderQueue, std::greater<Price>> bid;
-    std::map<Price, OrderQueue> ask;
-    Price market_price;
+    std::map<Price, OrderQueue, std::greater<Price>> bids;
+    std::map<Price, OrderQueue> asks;
+    std::map<Price, OrderQueue, std::greater<Price>> stopBids;
+    std::map<Price, OrderQueue> stopAsks;
+    Price marketPrice;
 
 public:
     Book(): 
-        bid(), 
-        ask(),
-        market_price(0)
+        bids(), 
+        asks(),
+        stopBids(),
+        stopAsks(),
+        marketPrice(0)
         {};
 
+    void processOrder(Order order) {
+        if (order.orderType == ORDER || order.orderType == LIMIT) {
+            if (order.side == BID) insertBid(order);
+            else if (order.side == ASK) insertAsk(order);
+        } else if (order.orderType == STOP || order.orderType == STOP_LIMIT) {
+            if (order.side == BID) insertStopBid(order);
+            else if (order.side == ASK) insertStopAsk(order);
+        }
+    }
+
+    void insertStopBid(Order order) {
+        if (!stopBids.contains(order.stop)) {
+            stopBids.insert({order.stop, OrderQueue()});
+        }
+        stopBids.at(order.stop).push(order);
+    }
+
+    void insertStopAsk(Order order) {
+        if (!stopAsks.contains(order.stop)) {
+            stopAsks.insert({order.stop, OrderQueue()});
+        }
+        stopAsks.at(order.stop).push(order);
+    }
+
+    void updatePrice(Price lastPrice) {
+        Price oldPrice = marketPrice;
+        marketPrice = lastPrice;
+
+        //trigger stops here
+
+    }
 
     Order matchBid(Order order) {
-        for (auto it = ask.begin(); it != ask.end(); it++) {
-            if (order.quantity <= 0) break;
+        Price lastPrice;
+        for (auto it = asks.begin(); it != asks.end(); it++) {
+            if (order.quantity <= 0 || (order.orderType == LIMIT && it->first > order.price)) break;
             if (it->second.getOrderNumber() <= 0) continue;
             it->second.processOrder(&order); 
+            lastPrice = it->first;
         }
+        updatePrice(lastPrice);
         return order;
     }
 
-    Order matchBidLimit(Order order) {
-        for (auto it = ask.begin(); it != ask.end(); it++) {
-            if (it->first > order.price || order.quantity <= 0) break;
-            if (it->second.getOrderNumber() <= 0) continue;
-            it->second.processOrder(&order); 
-        }
-        return order;
-    }
 
     Order matchAsk(Order order) {
-        for (auto it = bid.begin(); it != bid.end(); it++) {
-            if (order.quantity <= 0) break;
+        Price lastPrice;
+        for (auto it = bids.begin(); it != bids.end(); it++) {
+            if (order.quantity <= 0 || (order.orderType == LIMIT && it->first < order.price)) break;
             if (it->second.getOrderNumber() <= 0) continue;
             it->second.processOrder(&order); 
+            lastPrice = it->first;
         }
-        return order;
-    }
-
-    Order matchAskLimit(Order order) {
-        for (auto it = bid.begin(); it != bid.end(); it++) {
-            if (it->first < order.price || order.quantity <= 0) break;
-            if (it->second.getOrderNumber() <= 0) continue;
-            it->second.processOrder(&order); 
-        }
+        updatePrice(lastPrice);
         return order;
     }
 
     void insertBid(Order order) {
-        if (order.orderType == ORDER) order = matchBid(order);
-        else if (order.orderType == LIMIT) order = matchBidLimit(order);
+        order = matchBid(order);
         if (order.quantity <= 0) {
             return;
         }
-        if (!bid.contains(order.price)) {
-            bid[order.price] = OrderQueue();
+        if (!bids.contains(order.price)) {
+            bids[order.price] = OrderQueue();
         }
-        bid[order.price].push(order);
+        bids[order.price].push(order);
     }
 
 
     void insertAsk(Order order) {
-        if (order.orderType == ORDER) order = matchAsk(order);
-        else if (order.orderType == LIMIT) order = matchAskLimit(order);
+        order = matchAsk(order);
         if (order.quantity <= 0) {
             return;
         }
-        if (!ask.contains(order.price)) {
-            ask[order.price] = OrderQueue();
+        if (!asks.contains(order.price)) {
+            asks[order.price] = OrderQueue();
         }
-        ask[order.price].push(order);
+        asks[order.price].push(order);
     }
 
     std::vector<std::pair<Price, std::pair<Quantity, Quantity>>> exportData() {
         std::vector<std::pair<Price, std::pair<Quantity, Quantity>>> res;
-        for (auto it = ask.rbegin(); it != ask.rend(); it++) {
-           res.push_back({it->first, {0, it->second.getOrderNumber()}}); 
+        for (auto it = asks.rbegin(); it != asks.rend(); it++) {
+            if (it->first == MARKET_ORDER_ASK_PRICE) continue;
+            res.push_back({it->first, {0, it->second.getOrderNumber()}}); 
         }
-        for (auto it = bid.rbegin(); it != bid.rend(); it++) {
+        for (auto it = bids.begin(); it != bids.end(); it++) {
+            if (it->first == MARKET_ORDER_BID_PRICE) continue;
             res.push_back({it->first, {it->second.getOrderNumber(), 0}});
         } 
         return res;

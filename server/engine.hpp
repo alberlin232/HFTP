@@ -11,11 +11,7 @@ public:
 
     void placeOrder(Order order) {
         if (!stocks.contains(order.ticker)) stocks.insert({order.ticker, Book()});
-        if (order.side == BID) {
-            stocks.at(order.ticker).insertBid(order);
-        } else {
-            stocks.at(order.ticker).insertAsk(order);
-        }
+        stocks.at(order.ticker).processOrder(order);
     }
 
     void printStock(Ticker ticker) {

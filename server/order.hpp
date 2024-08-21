@@ -2,6 +2,7 @@
 
 #include <string>
 #include <cstdint>
+#include <limits>
 
 typedef double Price;
 typedef uint64_t Quantity;
@@ -9,6 +10,10 @@ typedef uint32_t OrderID;
 typedef uint32_t UserID;
 typedef uint64_t ID;
 typedef std::string Ticker;
+
+const Price MARKET_ORDER_BID_PRICE = std::numeric_limits<Price>::max();
+const Price MARKET_ORDER_ASK_PRICE = 0;
+const Price NO_STOP_PRICE = std::numeric_limits<Price>::min();
 
 enum Side {
     BID,
@@ -32,7 +37,7 @@ enum OrderCondition {
 struct Order {
     Ticker ticker;
     ID id;
-    Price price = -1;
+    Price price;
     Price stop = -1;
     Quantity quantity;
     Side side;
@@ -43,6 +48,7 @@ struct Order {
     Order(Ticker tk, ID id, Quantity q, Side s):
         ticker(tk),
         id(id),
+        price(s ? MARKET_ORDER_ASK_PRICE : MARKET_ORDER_BID_PRICE),
         quantity(q),
         side(s)
         {};
