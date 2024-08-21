@@ -1,3 +1,5 @@
+#pragma once
+
 #include <unordered_map>
 #include <iomanip>
 #include "book.hpp"
@@ -7,14 +9,13 @@ class Engine {
 public:
     Engine(): stocks() {};
 
-    void insertBid(Order order) {
+    void placeOrder(Order order) {
         if (!stocks.contains(order.ticker)) stocks.insert({order.ticker, Book()});
-        stocks.at(order.ticker).insertBid(order);
-    }
-
-    void insertAsk(Order order) {
-        if (!stocks.contains(order.ticker)) stocks.insert({order.ticker, Book()});
-        stocks.at(order.ticker).insertAsk(order);
+        if (order.side == BID) {
+            stocks.at(order.ticker).insertBid(order);
+        } else {
+            stocks.at(order.ticker).insertAsk(order);
+        }
     }
 
     void printStock(Ticker ticker) {

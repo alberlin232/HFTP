@@ -1,15 +1,18 @@
 #include <iostream>
+
+#include "order.hpp"
 #include "engine.hpp"
 
 int main() {
+    ID id_gen = 0;
     Engine engine;
-    engine.insertAsk({"APPLE", "ABE", 10.10, 2});
-    engine.insertAsk({"APPLE", "ABE", 10.20, 2});
-    engine.insertAsk({"APPLE", "ABE", 10.30, 10});
-    engine.insertAsk({"APPLE", "ABE", 10.40, 5});
-    engine.insertBid({"APPLE", "ABE", 10.20, 3});
-    engine.insertBid({"APPLE", "ABE", 9.90, 10});
-    engine.insertBid({"APPLE", "ABE", 9.80, 10});
+    engine.placeOrder(Order("APPLE", id_gen++, 10.10, 2, ASK, LIMIT));
+    engine.placeOrder(Order("APPLE", id_gen++, 10.20, 2, ASK, LIMIT));
+    engine.placeOrder(Order("APPLE", id_gen++, 10.30, 10, ASK, LIMIT));
+    engine.placeOrder(Order("APPLE", id_gen++, 10.40, 5, ASK, LIMIT));
+    engine.placeOrder(Order("APPLE", id_gen++, 10.20, 3, BID, LIMIT));
+    engine.placeOrder(Order("APPLE", id_gen++, 9.90, 10, BID, LIMIT));
+    engine.placeOrder(Order("APPLE", id_gen++, 9.80, 10, BID, LIMIT));
     engine.printStock("APPLE");
 }
 
