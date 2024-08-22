@@ -21,7 +21,7 @@ enum Side {
 };
 
 enum OrderType {
-    ORDER,
+    MARKET,
     LIMIT,
     STOP,
     STOP_LIMIT
@@ -38,10 +38,10 @@ struct Order {
     Ticker ticker;
     ID id;
     Price price;
-    Price stop = -1;
+    Price stop = NO_STOP_PRICE;
     Quantity quantity;
     Side side;
-    OrderType orderType = ORDER;
+    OrderType orderType = MARKET;
     OrderCondition condtion = NONE;
 
     Order(): ticker(""), id(0), quantity(0), side(BID) {};
@@ -53,13 +53,15 @@ struct Order {
         side(s)
         {};
 
-    Order(Ticker tk, ID id, Price p, Quantity q, Side s, OrderType t):
+    Order(Ticker tk, ID id, Price p, Price st, Quantity q, Side s, OrderType t, OrderCondition c):
         ticker(tk),
         id(id),
         price(p),
+        stop(st),
         quantity(q),
         side(s),
-        orderType(t)
+        orderType(t),
+        condtion(c)
         {};
     
     void fillQty(Quantity fill_qty) {

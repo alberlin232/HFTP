@@ -52,6 +52,15 @@ public:
         quantity -= node->order.quantity;
     }
 
+    bool remove(ID id) {
+        if (!dic.contains(id)) return false;
+        Node* node = dic.at(id);
+        node->prev->next = node->next;
+        node->next->prev = node->prev;
+        dic.erase(id);
+        return true;
+    }
+
     void decQty(Quantity qty) {
         quantity -= qty;
     }
@@ -74,13 +83,24 @@ public:
         {};
 
     void processOrder(Order order) {
-        if (order.orderType == ORDER || order.orderType == LIMIT) {
+        if (order.orderType == MARKET || order.orderType == LIMIT) {
             if (order.side == BID) insertBid(order);
             else if (order.side == ASK) insertAsk(order);
         } else if (order.orderType == STOP || order.orderType == STOP_LIMIT) {
             if (order.side == BID) insertStopBid(order);
             else if (order.side == ASK) insertStopAsk(order);
         }
+    }
+
+    bool removeOrder(Order order) {
+        bool removed = false;
+        if (order.orderType == STOP || order.orderType == STOP_LIMIT) {
+            removed = order.side ? stopAsks.at(order.stop).remove(order.id) : stopBids.at(order.stop).remove(order.id);
+        } 
+        if (!removed) {
+            removed = order.side ? asks.at(order.price).remove(order.id) : bids.at(order.price).remove(order.id);
+        }
+        return removed;
     }
 
     void insertStopBid(Order order) {
