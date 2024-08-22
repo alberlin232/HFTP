@@ -40,9 +40,9 @@ public:
         quantity += order.quantity;
     }
 
-    Order front() {
+    Order* front() {
         //TODO: add error handling here
-        return head->next->order;
+        return &(head->next->order);
     }
 
     void pop() {
@@ -51,15 +51,9 @@ public:
         dic.erase(node->order.id);
         quantity -= node->order.quantity;
     }
-    void processOrder(Order *order) {
-        Order match = front();
-        int fill_qty = match.getMaxFillQty(order);
-        match.fillQty(fill_qty);
-        order->fillQty(fill_qty);
-        quantity -= fill_qty;
-        if (match.quantity <= 0) {
-            pop();
-        }
+
+    void decQty(Quantity qty) {
+        quantity -= qty;
     }
 };
 
@@ -108,15 +102,51 @@ public:
         marketPrice = lastPrice;
 
         //trigger stops here
+        if (oldPrice < marketPrice){
+            //ask stops
+            activateStopAsks();
+        } else if (oldPrice > marketPrice) {
+            //bid stops
+            activateStopBids();
+        }
+    }
 
+    void activateStopAsks() {
+        for (auto it = stopAsks.begin(); it != stopAsks.end(); it++) {
+            if (marketPrice > it->first) break;
+            while (it->second.getOrderNumber() > 0) {
+                insertAsk(*(it->second.front()));
+                it->second.pop();
+            }
+        }
+    }
+
+    void activateStopBids() {
+        for (auto it = stopBids.begin(); it != stopBids.end(); it++) {
+            if (marketPrice < it->first) break;
+            while (it->second.getOrderNumber() > 0) {
+                insertAsk(*(it->second.front()));
+                it->second.pop();
+            }
+        }
     }
 
     Order matchBid(Order order) {
         Price lastPrice;
         for (auto it = asks.begin(); it != asks.end(); it++) {
-            if (order.quantity <= 0 || (order.orderType == LIMIT && it->first > order.price)) break;
+            if (order.quantity <= 0 || ((order.orderType == LIMIT || order.orderType == STOP_LIMIT)
+                 && it->first > order.price)) break;
             if (it->second.getOrderNumber() <= 0) continue;
-            it->second.processOrder(&order); 
+            while (it->second.getOrderNumber() > 0 && order.quantity > 0) {
+                Order* match = it->second.front();
+                int fill_qty = match->getMaxFillQty(&order);
+                match->fillQty(fill_qty);
+                order.fillQty(fill_qty);
+                it->second.decQty(fill_qty);
+                if (match->quantity <= 0) {
+                    it->second.pop();
+                }
+            }
             lastPrice = it->first;
         }
         updatePrice(lastPrice);
@@ -127,9 +157,19 @@ public:
     Order matchAsk(Order order) {
         Price lastPrice;
         for (auto it = bids.begin(); it != bids.end(); it++) {
-            if (order.quantity <= 0 || (order.orderType == LIMIT && it->first < order.price)) break;
+            if (order.quantity <= 0 || ((order.orderType == LIMIT || order.orderType == STOP_LIMIT)
+                 && it->first < order.price)) break;
             if (it->second.getOrderNumber() <= 0) continue;
-            it->second.processOrder(&order); 
+            while (it->second.getOrderNumber() > 0 && order.quantity > 0) {
+                Order* match = it->second.front();
+                int fill_qty = match->getMaxFillQty(&order);
+                match->fillQty(fill_qty);
+                order.fillQty(fill_qty);
+                it->second.decQty(fill_qty);
+                if (match->quantity <= 0) {
+                    it->second.pop();
+                }
+            }
             lastPrice = it->first;
         }
         updatePrice(lastPrice);
