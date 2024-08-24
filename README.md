@@ -1,6 +1,6 @@
-## High Frequency Tranding Platform (HFTP)
+## High Frequency Trading Platform (HFTP)
 
-Currently HFTP is a FIFO order matching engine that can do: market, limit, stop, and stop limit orders (single threaded)
+Currently, HFTP is a FIFO order matching engine that can do: market, limit, stop, and stop limit orders (single-threaded)
 
 ### Build Instructions
 1. Create build directory
