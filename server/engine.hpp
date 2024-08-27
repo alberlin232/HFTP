@@ -19,8 +19,8 @@ public:
             std::cout << "No Stock: " << ticker << std::endl;
             return;
         }
-        std::vector<std::pair<Price, std::pair<Quantity, Quantity>>> data = stocks.at(ticker).exportData();
-        std::cout << std::setw(10) << "BID" << std::setw(15) << "Price" << std::setw(15) << "ASK" << std::endl;
+        auto [price, data] = stocks.at(ticker).exportData();
+        std::cout << std::setw(10) << "BID" << std::setw(15) << "Price: " << price << std::setw(15) << "ASK" << std::endl;
         std::cout << std::string(40, '-') << std::endl; 
         for (const auto& entry : data) {
             Price price = entry.first;

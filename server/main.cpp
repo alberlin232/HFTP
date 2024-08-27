@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <limits>
+#include <chrono>
 #include "engine.hpp"
 #include "order.hpp"
 
@@ -114,7 +115,10 @@ int main() {
             OrderCondition condition = parseCondition(conditionStr);
 
             // Place the order
+            auto start = std::chrono::high_resolution_clock::now();
             engine.placeOrder(Order(symbol, id_gen++, price, stopPrice, quantity, orderSide, orderType, condition));
+            auto end = std::chrono::high_resolution_clock::now();
+            auto durration = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
             std::cout << "Order placed: " << symbol << " " << quantity << " " << side << " " << type;
             if (type != "MARKET") {
                 std::cout << " " << price;
@@ -123,6 +127,7 @@ int main() {
                 std::cout << " Stop Price: " << stopPrice;
             }
             std::cout << " " << conditionStr << "\n";
+            std::cout << "Time taken: " << durration << "μs" << std::endl;
 
         } else if (command.rfind("print", 0) == 0) {
             // Parsing the 'print' command

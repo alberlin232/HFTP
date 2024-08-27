@@ -1,70 +1,6 @@
 #pragma once
 
-#include <map>
-#include <unordered_map>
-#include "order.hpp"
-
-struct Node {
-    Order order;
-    Node* next;
-    Node* prev;
-    Node(Order order): order(order), next(nullptr), prev(nullptr) {};
-};
-
-class OrderQueue {
-    Node* head;
-    Node* tail;
-    std::unordered_map<ID, Node*> dic;
-    Quantity quantity;
-public:
-    OrderQueue(): dic(), quantity(0) {
-        head = new Node(Order());
-        tail = new Node(Order());
-        head->next = tail;
-        tail->prev = head;
-    };
-
-    Quantity getOrderNumber() { return quantity;}
-
-    void push(Order order) {
-        if (dic.contains(order.id)) {
-            std::cout << "BIG PROBLEMS" << std::endl;
-            exit(0);
-        }
-        Node* node = new Node(order); 
-        Node* prev = tail->prev;
-        prev->next = node;
-        node->prev = prev;
-        node->next = tail;
-        dic[order.id] = node;
-        quantity += order.quantity;
-    }
-
-    Order* front() {
-        //TODO: add error handling here
-        return &(head->next->order);
-    }
-
-    void pop() {
-        Node* node = head->next;
-        head->next  = head->next->next;
-        dic.erase(node->order.id);
-        quantity -= node->order.quantity;
-    }
-
-    bool remove(ID id) {
-        if (!dic.contains(id)) return false;
-        Node* node = dic.at(id);
-        node->prev->next = node->next;
-        node->next->prev = node->prev;
-        dic.erase(id);
-        return true;
-    }
-
-    void decQty(Quantity qty) {
-        quantity -= qty;
-    }
-};
+#include "orderQueue.hpp"
 
 class Book {
     std::map<Price, OrderQueue, std::greater<Price>> bids;
@@ -122,10 +58,11 @@ public:
         marketPrice = lastPrice;
 
         //trigger stops here
-        if (oldPrice < marketPrice){
+        if (oldPrice > marketPrice){
             //ask stops
             activateStopAsks();
-        } else if (oldPrice > marketPrice) {
+        }
+        if (oldPrice < marketPrice) {
             //bid stops
             activateStopBids();
         }
@@ -145,18 +82,18 @@ public:
         for (auto it = stopBids.begin(); it != stopBids.end(); it++) {
             if (marketPrice < it->first) break;
             while (it->second.getOrderNumber() > 0) {
-                insertAsk(*(it->second.front()));
+                insertBid(*(it->second.front()));
                 it->second.pop();
             }
         }
     }
 
     Order matchBid(Order order) {
-        Price lastPrice;
+        Price lastPrice = marketPrice;
         for (auto it = asks.begin(); it != asks.end(); it++) {
             if (order.quantity <= 0 || ((order.orderType == LIMIT || order.orderType == STOP_LIMIT)
                  && it->first > order.price)) break;
-            if (it->second.getOrderNumber() <= 0) continue;
+            if (it->second.getOrderNumber() <= 0 || ((order.orderType == MARKET || order.orderType == STOP) && it->first == MARKET_ORDER_ASK_PRICE)) continue;
             while (it->second.getOrderNumber() > 0 && order.quantity > 0) {
                 Order* match = it->second.front();
                 int fill_qty = match->getMaxFillQty(&order);
@@ -167,7 +104,7 @@ public:
                     it->second.pop();
                 }
             }
-            lastPrice = it->first;
+            lastPrice = it->first == MARKET_ORDER_ASK_PRICE ?  order.price : it->first;
         }
         updatePrice(lastPrice);
         return order;
@@ -175,11 +112,11 @@ public:
 
 
     Order matchAsk(Order order) {
-        Price lastPrice;
+        Price lastPrice = marketPrice;
         for (auto it = bids.begin(); it != bids.end(); it++) {
             if (order.quantity <= 0 || ((order.orderType == LIMIT || order.orderType == STOP_LIMIT)
                  && it->first < order.price)) break;
-            if (it->second.getOrderNumber() <= 0) continue;
+            if (it->second.getOrderNumber() <= 0 || ((order.orderType == MARKET || order.orderType == STOP) && it->first == MARKET_ORDER_BID_PRICE)) continue;
             while (it->second.getOrderNumber() > 0 && order.quantity > 0) {
                 Order* match = it->second.front();
                 int fill_qty = match->getMaxFillQty(&order);
@@ -190,7 +127,7 @@ public:
                     it->second.pop();
                 }
             }
-            lastPrice = it->first;
+            lastPrice = it->first == MARKET_ORDER_BID_PRICE ? order.price : it->first;
         }
         updatePrice(lastPrice);
         return order;
@@ -219,16 +156,16 @@ public:
         asks[order.price].push(order);
     }
 
-    std::vector<std::pair<Price, std::pair<Quantity, Quantity>>> exportData() {
+    std::pair<Price, std::vector<std::pair<Price, std::pair<Quantity, Quantity>>>> exportData() {
         std::vector<std::pair<Price, std::pair<Quantity, Quantity>>> res;
         for (auto it = asks.rbegin(); it != asks.rend(); it++) {
-            if (it->first == MARKET_ORDER_ASK_PRICE) continue;
+            if (it->first == MARKET_ORDER_ASK_PRICE || it->second.getOrderNumber() <= 0) continue;
             res.push_back({it->first, {0, it->second.getOrderNumber()}}); 
         }
         for (auto it = bids.begin(); it != bids.end(); it++) {
-            if (it->first == MARKET_ORDER_BID_PRICE) continue;
+            if (it->first == MARKET_ORDER_BID_PRICE || it->second.getOrderNumber() <= 0) continue;
             res.push_back({it->first, {it->second.getOrderNumber(), 0}});
         } 
-        return res;
+        return {marketPrice, res};
     }
 };
